@@ -24,8 +24,6 @@ static size_t header_callback(char* buf, size_t size, size_t nitems, void* userd
         *p = '\0';
 
         strcpy(udata, location);
-
-        printf("Location: %s\n", udata);
     }
 
     return nitems * size;
@@ -52,15 +50,17 @@ static char* sndcld_getid(char* url) {
     char* dot = NULL;
     size_t len = 0;
 
-    if(!url) return NULL;
+    if(!location) return NULL;
+
+    if(!url) goto error;
 
     resolve_url = malloc(sizeof(char) * (strlen("http://api.soundcloud.com/resolve.json?url=&client_id=YOUR_CLIENT_ID") + strlen(url) + 1));
+    if(!resolve_url) goto error;
+
     sprintf(resolve_url, "http://api.soundcloud.com/resolve.json?url=%s&client_id=YOUR_CLIENT_ID", url);
 
-    printf("DBG: resolve_url = \"%s\"\n", resolve_url);
-
     curl = curl_easy_init();
-    if(!curl) return NULL;
+    if(!curl) goto error;
 
     curl_easy_setopt(curl, CURLOPT_URL, resolve_url);
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback);
@@ -80,8 +80,14 @@ static char* sndcld_getid(char* url) {
 
     curl_easy_cleanup(curl);
     free(location);
+    free(resolve_url);
 
     return id;
+
+error:
+    free(location);
+    free(resolve_url);
+    return NULL;
 }
 
 void get_song(char* url) {
@@ -89,8 +95,6 @@ void get_song(char* url) {
     CURL* curl = NULL;
     char* id = NULL;
     char* streamurl = NULL;
-
-    printf("Getting song id...\n");
 
     id = sndcld_getid(url);
     if(!id) goto error;
@@ -104,8 +108,6 @@ void get_song(char* url) {
      * api.soundcloud.com/tracks/[id]/stream?client_id=[id]
      */
 
-    printf("DBG: song id = %s\n", id);
-
     streamurl = malloc((strlen("http://api.soundcloud.com/tracks//stream?client_id=YOUR_CLIENT_ID") + strlen(id) + 1) * sizeof(char));
     if(!streamurl) goto error;
 
@@ -118,12 +120,10 @@ void get_song(char* url) {
 
     curl_easy_setopt(curl, CURLOPT_URL, streamurl);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, song);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
     curl_easy_perform(curl);
 
-    fflush(song);
     free(id);
     curl_easy_cleanup(curl);
     free(streamurl);
@@ -133,6 +133,6 @@ void get_song(char* url) {
 
 error:
     free(id);
-    curl_easy_cleanup(curl);
     free(streamurl);
+    curl_easy_cleanup(curl);
 }
