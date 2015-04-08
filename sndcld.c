@@ -34,6 +34,7 @@ static size_t curl_null_callback(char* buf, size_t size, size_t nitems, void* us
     /* Avoid compiler warnings */
     buf = userdata;
     buf++;
+    buf--;
 
     return size * nitems;
 }
