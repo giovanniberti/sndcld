@@ -70,6 +70,21 @@ static char* sndcld_getid(char* url) {
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_null_callback);
     curl_easy_perform(curl);
 
+    /*
+     * 'tmp' is a temporary value for the id.
+     * The id is extrapolated as such:
+     *
+     * 'location' is in the format 'https://api.soundcloud.com/tracks/[id].json?[...]'
+     * So we move the pointer after the third slash (right after "tracks/"),
+     * then find the first dot (the one of the json extension)
+     * and copy byte by byte from the new pointer until the dot.
+     * Then we add the NUL byte.
+     *
+     * Another approach would be truncating the string at the dot position
+     * replacing it with a NUL byte and then using strcpy()
+     * This would be safer and feasible as long as we don't use the 'location' string after.
+     */
+
     tmp = location + (sizeof(char) * strlen("https://api.soundcloud.com/tracks/"));
 
     dot = strchr(tmp, '.');
@@ -95,11 +110,17 @@ error:
 char* sndcld_getname(char* url) {
     size_t len = 0;
     char* name = NULL;
+    char* grbg = NULL;
     size_t offset = 0;
     int second = 0;
     if(!url) return NULL;
 
     len = strlen(url);
+
+    /*
+     * Assign to 'name' the part "user/track" of the soundcloud URL and prettify it
+     * Example https://soundcloud.com/tinush/tinush-journey-original => tinush/tinush-journey-original
+     */
 
     while(url[--len] != '/' || !second) {
         ++offset;
@@ -110,6 +131,14 @@ char* sndcld_getname(char* url) {
 
     memcpy(name, url + len + 1, offset + 1); /* include NUL byte */
 
+    while((grbg = strchr(name, '/'))) { /* remove slashes */
+        *grbg = ' ';
+    }
+
+    while((grbg = strchr(name, '-'))) { /* remove hyphens */
+        *grbg = ' ';
+    }
+
     return name;
 }
 
@@ -119,7 +148,6 @@ void get_song(char* url, char* filename) {
     CURL* curl = NULL;
     char* id = NULL;
     char* name = NULL;
-    char* slash = NULL;
     char* streamurl = NULL;
 
     if(!url) {
@@ -130,8 +158,12 @@ void get_song(char* url, char* filename) {
     id = sndcld_getid(url);
     if(!id) goto error;
 
+    /*
+     * Add space for ".mp3" extension
+     * (4 characters plus NUL byte)
+     */
+
     if(filename) {
-        name = filename;
         name = malloc((strlen(name) + 1) * sizeof(char) + 4 * sizeof(char));
         if(!name) goto error;
 
@@ -140,8 +172,6 @@ void get_song(char* url, char* filename) {
         name = sndcld_getname(url);
         if(!name) goto error;
 
-        slash = strchr(name, '/');
-        *slash = ' ';
         name = realloc(name, (strlen(name) + 1) * sizeof(char) + 4 * sizeof(char));
     }
 
@@ -152,8 +182,8 @@ void get_song(char* url, char* filename) {
 
     /*
      * Path to get song:
-     * api.soundcloud.com/resolve.json?url=[url]&client_id=[id] -> api.soundcloud.com/tracks/[id].json?...
-     * api.soundcloud.com/tracks/[id]/stream?client_id=[client_id]
+     * api.soundcloud.com/resolve.json?url=[url]&client_id=[client_id] -> api.soundcloud.com/tracks/[id].json?...
+     * api.soundcloud.com/tracks/[id]/stream?client_id=[client_id] (raw file)
      */
 
     streamurl = malloc((strlen("http://api.soundcloud.com/tracks//stream?client_id=YOUR_CLIENT_ID") + strlen(id) + 1) * sizeof(char));
