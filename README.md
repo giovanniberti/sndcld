@@ -7,10 +7,10 @@ It is meant as an exercise and shouldn't be used for illegal purposes.
 - [x] Download arbitrary tracks on soundcloud
 - [ ] Choose output filename interactively or with CLI arguments
 - [ ] Handle playlists
-- [ ] If filename is not given, use URL to guess
+- [x] If filename is not given, use URL to guess
 
 ## Dependencies
-The only dependency is libcurl (with SSL support).
+The only dependences are libcurl (with SSL support) and CMake to build the project.
 
 ## TODO
-- [ ] Automatic build with CMake
+- [x] Automatic build with CMake
