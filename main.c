@@ -13,7 +13,6 @@
 #include "sndcld.h"
 
 int main(int argc, char** argv) {
-    int i = 0;
     if (argc < 2) {
         printf("Warning: too few arguments\n"
                 "Usage: %s [url] [-n filename]\n", argv[0]);
