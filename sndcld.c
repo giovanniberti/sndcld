@@ -7,6 +7,7 @@
 #include <curl/curl.h>  /* libcurl */
 
 static char* sndcld_getid(char* url);
+static char* sndcld_getname(char* url);
 static size_t header_callback(char* buf, size_t size, size_t nitems, void* userdata);
 static size_t curl_null_callback(char* buf, size_t size, size_t nitems, void* userdata);
 static size_t write_callback(char* buf, size_t size, size_t nitems, FILE* file);
@@ -30,7 +31,7 @@ static size_t header_callback(char* buf, size_t size, size_t nitems, void* userd
 }
 
 static size_t curl_null_callback(char* buf, size_t size, size_t nitems, void* userdata) {
-    /* To avoid compiler warnings */
+    /* Avoid compiler warnings */
     buf = userdata;
     buf++;
 
@@ -90,14 +91,52 @@ error:
     return NULL;
 }
 
+char* sndcld_getname(char* url) {
+    size_t len = 0;
+    char* name = NULL;
+    size_t offset = 0;
+    int second = 0;
+    if(!url) return NULL;
+
+    len = strlen(url);
+
+    while(url[--len] != '/' || !second) {
+        ++offset;
+        if(url[len] == '/') second = 1;
+    }
+
+    name = malloc((offset + 1) * sizeof(char));
+
+    memcpy(name, url + len + 1, offset + 1); /* include NUL byte */
+
+    return name;
+}
+
+
 void get_song(char* url) {
     FILE* song = NULL;
     CURL* curl = NULL;
     char* id = NULL;
+    char* name = NULL;
+    char* slash = NULL;
     char* streamurl = NULL;
+
+    if(!url) {
+        fprintf(stderr, "Error: no url supplied!\n");
+        return;
+    }
 
     id = sndcld_getid(url);
     if(!id) goto error;
+
+    name = sndcld_getname(url);
+    if(!name) goto error;
+
+    slash = strchr(name, '/');
+    *slash = ' ';
+    name = realloc(name, sizeof(name) + 4 * sizeof(char));
+
+    strcat(name, ".mp3");
 
     curl = curl_easy_init();
     if(!curl) goto error;
@@ -105,7 +144,7 @@ void get_song(char* url) {
     /*
      * Path to get song:
      * api.soundcloud.com/resolve.json?url=[url]&client_id=[id] -> api.soundcloud.com/tracks/[id].json?...
-     * api.soundcloud.com/tracks/[id]/stream?client_id=[id]
+     * api.soundcloud.com/tracks/[id]/stream?client_id=[client_id]
      */
 
     streamurl = malloc((strlen("http://api.soundcloud.com/tracks//stream?client_id=YOUR_CLIENT_ID") + strlen(id) + 1) * sizeof(char));
@@ -113,10 +152,10 @@ void get_song(char* url) {
 
     sprintf(streamurl, "http://api.soundcloud.com/tracks/%s/stream?client_id=YOUR_CLIENT_ID", id);
 
-    song = fopen("song.mp3", "w");
+    song = fopen(name, "w");
     if(!song) goto error;
 
-    printf("Downloading song from %s\n", streamurl);
+    printf("Downloading song into \"%s\"\n", name);
 
     curl_easy_setopt(curl, CURLOPT_URL, streamurl);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -125,14 +164,16 @@ void get_song(char* url) {
     curl_easy_perform(curl);
 
     free(id);
-    curl_easy_cleanup(curl);
+    free(name);
     free(streamurl);
+    curl_easy_cleanup(curl);
     fclose(song);
 
     return;
 
 error:
     free(id);
+    free(name);
     free(streamurl);
     curl_easy_cleanup(curl);
 }
