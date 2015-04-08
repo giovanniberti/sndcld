@@ -114,7 +114,7 @@ char* sndcld_getname(char* url) {
 }
 
 
-void get_song(char* url) {
+void get_song(char* url, char* filename) {
     FILE* song = NULL;
     CURL* curl = NULL;
     char* id = NULL;
@@ -130,12 +130,20 @@ void get_song(char* url) {
     id = sndcld_getid(url);
     if(!id) goto error;
 
-    name = sndcld_getname(url);
-    if(!name) goto error;
+    if(filename) {
+        name = filename;
+        name = malloc((strlen(name) + 1) * sizeof(char) + 4 * sizeof(char));
+        if(!name) goto error;
 
-    slash = strchr(name, '/');
-    *slash = ' ';
-    name = realloc(name, sizeof(name) + 4 * sizeof(char));
+        strcpy(name, filename);
+    } else {
+        name = sndcld_getname(url);
+        if(!name) goto error;
+
+        slash = strchr(name, '/');
+        *slash = ' ';
+        name = realloc(name, (strlen(name) + 1) * sizeof(char) + 4 * sizeof(char));
+    }
 
     strcat(name, ".mp3");
 

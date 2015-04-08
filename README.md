@@ -5,7 +5,7 @@ It is meant as an exercise and shouldn't be used for illegal purposes.
 
 ## Features
 - [x] Download arbitrary tracks on soundcloud
-- [ ] Choose output filename interactively or with CLI arguments
+- [x] Choose output filename interactively or with CLI arguments
 - [ ] Handle playlists
 - [x] If filename is not given, use URL to guess
 
