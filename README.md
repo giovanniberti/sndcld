@@ -10,7 +10,7 @@ It is meant as an exercise and shouldn't be used for illegal purposes.
 - [x] If filename is not given, use URL to guess
 
 ## Dependencies
-The only dependences are libcurl (with SSL support) and CMake to build the project.
+The only dependencies are libcurl (with SSL support) and CMake to build the project.
 
 ## TODO
 - [x] Automatic build with CMake
